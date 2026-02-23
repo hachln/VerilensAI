@@ -3,8 +3,7 @@
 // ---------------------------------------------------------
 // CONFIGURATION (Hardcoded for Hackathon Demo)
 // ---------------------------------------------------------
-//API KEYS Here
-
+//API keys here
 // ---------------------------------------------------------
 // 1. CONTEXT MENU SETUP
 // ---------------------------------------------------------
@@ -69,19 +68,34 @@ async function handleAnalysis(imageUrl, tabId, userClaim) {
 
 // Step A: Reverse Image Search
 async function searchImageContext(imageUrl) {
-  // We use SerpApi's Google Lens engine
-  const url = `https://serpapi.com/search.json?engine=google_lens&url=${encodeURIComponent(imageUrl)}&api_key=${SERPAPI_KEY}`;
-  
-  const response = await fetch(url);
+  // SearchApi.io endpoint
+  const url = "https://www.searchapi.io/api/v1/search"; 
+
+  // We use a GET request with query parameters for SearchApi.io
+  const params = new URLSearchParams({
+    engine: "google_lens",     // Specific engine for Lens
+    url: imageUrl,             // The image to verify
+    api_key: SEARCHAPI_KEY     // Your API Key
+  });
+
+  const response = await fetch(`${url}?${params.toString()}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json"
+    }
+  });
+
   const data = await response.json();
 
-  // We extract the "Visual Matches" or "Knowledge Graph" from the JSON
-  // This usually contains titles and snippets from websites where the image appears
-  if (!data.visual_matches) return "No visual matches found.";
+  // SearchApi.io also returns a 'visual_matches' array
+  if (!data.visual_matches || data.visual_matches.length === 0) {
+    return "No visual matches found on the internet.";
+  }
 
-  // Simplify the data for Gemini (to save tokens)
+  // Map the results for Gemini
+  // We extract Title, Source, and the Link
   const snippets = data.visual_matches.slice(0, 5).map(match => {
-    return `- Found on: ${match.title} (${match.source})`;
+    return `- Title: ${match.title} | Source: ${match.source} | Link: ${match.link}`;
   }).join("\n");
 
   return snippets;
